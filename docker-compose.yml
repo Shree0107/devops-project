@@ -1,0 +1,52 @@
+
+#
+# This starts 3 containers together:
+#   1. app        → your Flask API  (http://localhost:8080)
+#   2. prometheus → metrics collector (http://localhost:9090)
+#   3. grafana    → metrics dashboard (http://localhost:3000)
+
+
+version: "3.9"
+
+services:
+
+  # ── Flask API ───────────────────────────────────────────────────
+  app:
+    build: .
+    container_name: devops-demo-api
+    ports:
+      - "8080:8080"
+    environment:
+      - ENV=development
+      - PORT=8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ── Prometheus ──────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      # Mount our custom config file into the container
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+
+  # ── Grafana ────────────────────────────────────────────────────
+
+  # Default login: admin / admin
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
+    restart: unless-stopped
