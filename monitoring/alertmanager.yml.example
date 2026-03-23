@@ -1,0 +1,23 @@
+write email in <Your gmail> and app pass in <Your App pass>  in the below code
+
+global:
+  smtp_smarthost: "smtp.gmail.com:587"
+  smtp_from: <Your gmail>
+  smtp_auth_identity: <Your gmail>    
+  smtp_auth_username: <Your gmail>    
+  smtp_auth_password: <Your App pass>
+  smtp_require_tls: true
+
+route:
+  group_by: ["alertname"]
+  group_wait: 10s
+  group_interval: 1m
+  repeat_interval: 1h
+  receiver: "email-alert"
+
+receivers:
+  - name: "email-alert"
+    email_configs:
+      - to: <Your gmail>
+        send_resolved: true
+        require_tls: true
