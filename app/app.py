@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, request
 from prometheus_flask_exporter import PrometheusMetrics
 import os
-
+os.environ.get("API_KEY")
 app = Flask(__name__)
 
 # This single line adds /metrics endpoint automatically
@@ -19,6 +19,13 @@ def home():
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({"status": "healthy"}), 200
+
+@app.route("/secret-test")
+def secret_test():
+    api_key = os.environ.get("API_KEY")
+    return jsonify({
+        "api_key_loaded": bool(api_key)
+    })
 
 @app.route("/greet", methods=["GET"])
 def greet():
