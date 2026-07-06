@@ -2,7 +2,6 @@ from flask import Flask, jsonify, request
 from prometheus_flask_exporter import PrometheusMetrics
 import os
 os.environ.get("API_KEY")
-
 app = Flask(__name__)
 
 # This single line adds /metrics endpoint automatically
