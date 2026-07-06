@@ -7,7 +7,7 @@ on:
 
 env:
   AWS_REGION: eu-west-3
-  ECR_REPOSITORY: fastapi-app
+  ECR_REPOSITORY: fastapi/fastapiapp
   ECS_CLUSTER: fastapi-cluster
   ECS_SERVICE: fastapi-service
   ECS_TASK_DEFINITION: fastapi-task
