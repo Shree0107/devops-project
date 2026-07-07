@@ -50,7 +50,7 @@ resource "aws_ecs_task_definition" "app" {
 
         options = {
 
-          awslogs-group = "/ecs/fastapi"
+          awslogs-group = aws_cloudwatch_log_group.fastapi.name
 
           awslogs-region = "eu-west-3"
 

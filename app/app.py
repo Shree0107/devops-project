@@ -25,6 +25,7 @@ def secret_test():
     api_key = os.environ.get("API_KEY")
     return jsonify({
         "api_key_loaded": bool(api_key)
+        
     })
 
 @app.route("/greet", methods=["GET"])
