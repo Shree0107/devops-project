@@ -1,3 +1,91 @@
+# name: Deploy to ECS (OIDC - No AWS Keys)
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# env:
+#   AWS_REGION: eu-west-3
+#   ECR_REPOSITORY: fastapi-app
+#   ECS_CLUSTER: fastapi-cluster
+#   ECS_SERVICE: fastapi-service
+#   ECS_TASK_DEFINITION: fastapi-task
+#   CONTAINER_NAME: fastapi-container
+
+# jobs:
+#   deploy:
+#     runs-on: ubuntu-latest
+
+#     permissions:
+#       id-token: write
+#       contents: read
+
+#     steps:
+#       # 1️⃣ Checkout code
+#       - name: Checkout code
+#         uses: actions/checkout@v4
+
+#       # 2️⃣ Configure AWS credentials (OIDC - NO KEYS)
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: arn:aws:iam::767397792932:role/githubaccess
+#           aws-region: ${{ env.AWS_REGION }}
+
+#       # 3️⃣ Login to Amazon ECR
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v2
+
+#       # 4️⃣ Build Docker image (tag = commit SHA)
+#       - name: Build Docker image
+#         env:
+#           IMAGE_TAG: ${{ github.sha }}
+#         run: |
+#           docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+
+#       # 5️⃣ Tag image for ECR
+#       - name: Tag Docker image
+#         env:
+#           IMAGE_TAG: ${{ github.sha }}
+#         run: |
+#           docker tag $ECR_REPOSITORY:$IMAGE_TAG \
+#           ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+
+#       # 6️⃣ Push image to ECR
+#       - name: Push image to ECR
+#         env:
+#           IMAGE_TAG: ${{ github.sha }}
+#         run: |
+#           docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+
+#       # 7️⃣ Download current task definition
+#       - name: Download task definition
+#         run: |
+#           aws ecs describe-task-definition \
+#             --task-definition $ECS_TASK_DEFINITION \
+#             --query taskDefinition > task-definition.json
+
+#       # 8️⃣ Update task definition with new image
+#       - name: Render new task definition
+#         id: render-task-def
+#         uses: aws-actions/amazon-ecs-render-task-definition@v1
+#         with:
+#           task-definition: task-definition.json
+#           container-name: ${{ env.CONTAINER_NAME }}
+#           image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+
+#       # 9️⃣ Deploy to ECS
+#       - name: Deploy to ECS service
+#         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+#         with:
+#           task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+#           service: ${{ env.ECS_SERVICE }}
+#           cluster: ${{ env.ECS_CLUSTER }}
+#           wait-for-service-stability: true
+
+
 name: Deploy to ECS (OIDC - No AWS Keys)
 
 on:
@@ -7,14 +95,16 @@ on:
 
 env:
   AWS_REGION: eu-west-3
-  ECR_REPOSITORY: fastapi/fastapiapp
+  ECR_REPOSITORY: fastapi-app
   ECS_CLUSTER: fastapi-cluster
   ECS_SERVICE: fastapi-service
   ECS_TASK_DEFINITION: fastapi-task
   CONTAINER_NAME: fastapi-container
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
   deploy:
+
     runs-on: ubuntu-latest
 
     permissions:
@@ -22,65 +112,94 @@ jobs:
       contents: read
 
     steps:
-      # 1️⃣ Checkout code
+
+      # 1. Checkout source code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials (OIDC - NO KEYS)
+
+      # 2. Authenticate AWS using OIDC
+      # No AWS_ACCESS_KEY_ID
+      # No AWS_SECRET_ACCESS_KEY
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: arn:aws:iam::767397792932:role/githubaccess
           aws-region: ${{ env.AWS_REGION }}
 
-      # 3️⃣ Login to Amazon ECR
+
+      # 3. Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 4️⃣ Build Docker image (tag = commit SHA)
-      - name: Build Docker image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
 
-      # 5️⃣ Tag image for ECR
-      - name: Tag Docker image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
+      # 4. Build Docker image
+      - name: Build Docker image
         run: |
-          docker tag $ECR_REPOSITORY:$IMAGE_TAG \
+          docker build \
+          -t $ECR_REPOSITORY:$IMAGE_TAG .
+
+
+      # 5. Tag image for ECR
+      - name: Tag Docker image
+        run: |
+          docker tag \
+          $ECR_REPOSITORY:$IMAGE_TAG \
           ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # 6️⃣ Push image to ECR
+
+      # 6. Push image to ECR
       - name: Push image to ECR
-        env:
-          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push \
+          ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
 
-      # 7️⃣ Download current task definition
-      - name: Download task definition
+
+      # 7. Get current ECS task definition
+      - name: Download ECS task definition
         run: |
+
           aws ecs describe-task-definition \
-            --task-definition $ECS_TASK_DEFINITION \
-            --query taskDefinition > task-definition.json
+          --task-definition $ECS_TASK_DEFINITION \
+          --query taskDefinition \
+          | jq 'del(
+              .taskDefinitionArn,
+              .revision,
+              .status,
+              .requiresAttributes,
+              .compatibilities,
+              .registeredAt,
+              .registeredBy
+            )' \
+          > task-definition.json
 
-      # 8️⃣ Update task definition with new image
-      - name: Render new task definition
-        id: render-task-def
+
+      # 8. Replace container image
+      - name: Update task definition image
+        id: render-task-definition
         uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: ${{ env.CONTAINER_NAME }}
-          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
-      # 9️⃣ Deploy to ECS
-      - name: Deploy to ECS service
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
-          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+
+          task-definition: task-definition.json
+
+          container-name: ${{ env.CONTAINER_NAME }}
+
+          image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+
+
+      # 9. Deploy ECS service
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+
+        with:
+
+          task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
+
           service: ${{ env.ECS_SERVICE }}
+
           cluster: ${{ env.ECS_CLUSTER }}
+
           wait-for-service-stability: true
