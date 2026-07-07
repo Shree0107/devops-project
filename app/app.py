@@ -20,6 +20,7 @@ def home():
 def health():
     return jsonify({"status": "healthy"}), 200
 
+
 @app.route("/secret-test")
 def secret_test():
     api_key = os.environ.get("API_KEY")

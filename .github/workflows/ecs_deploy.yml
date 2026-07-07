@@ -85,7 +85,6 @@
 #           cluster: ${{ env.ECS_CLUSTER }}
 #           wait-for-service-stability: true
 
-
 name: Deploy to ECS (OIDC - No AWS Keys)
 
 on:
@@ -104,7 +103,6 @@ env:
 
 jobs:
   deploy:
-
     runs-on: ubuntu-latest
 
     permissions:
@@ -112,11 +110,9 @@ jobs:
       contents: read
 
     steps:
-
       # 1. Checkout source code
       - name: Checkout code
         uses: actions/checkout@v4
-
 
       # 2. Authenticate AWS using OIDC
       # No AWS_ACCESS_KEY_ID
@@ -127,19 +123,16 @@ jobs:
           role-to-assume: arn:aws:iam::767397792932:role/githubaccess
           aws-region: ${{ env.AWS_REGION }}
 
-
       # 3. Login to Amazon ECR
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
 
       # 4. Build Docker image
       - name: Build Docker image
         run: |
           docker build \
           -t $ECR_REPOSITORY:$IMAGE_TAG .
-
 
       # 5. Tag image for ECR
       - name: Tag Docker image
@@ -148,13 +141,11 @@ jobs:
           $ECR_REPOSITORY:$IMAGE_TAG \
           ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
 
-
       # 6. Push image to ECR
       - name: Push image to ECR
         run: |
           docker push \
           ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:$IMAGE_TAG
-
 
       # 7. Get current ECS task definition
       - name: Download ECS task definition
@@ -174,28 +165,23 @@ jobs:
             )' \
           > task-definition.json
 
-
       # 8. Replace container image
       - name: Update task definition image
         id: render-task-definition
         uses: aws-actions/amazon-ecs-render-task-definition@v1
 
         with:
-
           task-definition: task-definition.json
 
           container-name: ${{ env.CONTAINER_NAME }}
 
           image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
-
-
       # 9. Deploy ECS service
       - name: Deploy to ECS
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
 
         with:
-
           task-definition: ${{ steps.render-task-definition.outputs.task-definition }}
 
           service: ${{ env.ECS_SERVICE }}
