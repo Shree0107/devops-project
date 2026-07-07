@@ -11,7 +11,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
   ]
 
   security_group_ids = [
-    aws_security_group.ecs.id
+    aws_security_group.endpoint.id
   ]
 
   private_dns_enabled = true
@@ -30,7 +30,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   ]
 
   security_group_ids = [
-    aws_security_group.ecs.id
+    aws_security_group.endpoint.id
   ]
 
   private_dns_enabled = true
@@ -49,7 +49,7 @@ resource "aws_vpc_endpoint" "secret_manager" {
   ]
 
   security_group_ids = [
-    aws_security_group.ecs.id
+    aws_security_group.endpoint.id
   ]
 
   private_dns_enabled = true
